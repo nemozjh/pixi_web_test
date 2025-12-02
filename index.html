@@ -2,677 +2,355 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pixi Projection Video Tuner</title>
+  <title>VIS Demo (Pixi Projection + overlay_data)</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #111;
       color: #eee;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    #top-bar {
-      padding: 8px 12px;
-      background: #181818;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid #333;
-      z-index: 10;
-      flex: 0 0 auto;
-    }
-    #top-bar label {
-      font-size: 13px;
-      color: #aaa;
-    }
-    #top-bar input[type="file"] {
-      font-size: 13px;
     }
 
-    /* Fixed-size video window like a normal player */
-    #canvas-container {
-      position: relative;
-      overflow: hidden;
-      background: #000;
-
-      width: 100%;
-      max-width: 1000px;
+    #app {
+      padding: 12px;
+      max-width: 1280px;
       margin: 0 auto;
-      aspect-ratio: 16 / 9;
-      flex: 0 0 auto;
     }
 
-    #controls {
-      padding: 10px 14px 12px;
-      background: #181818;
-      border-top: 1px solid #333;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      font-size: 12px;
-      flex: 0 0 auto;
-    }
-    #controls-top,
-    #controls-bottom {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 10px 16px;
-    }
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .control-group label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #ccc;
-    }
-    .control-group span.value {
-      color: #7fd4ff;
-      font-variant-numeric: tabular-nums;
-      margin-left: 6px;
-    }
-    .control-group input[type="range"] {
-      width: 100%;
-    }
-    #hint {
-      grid-column: 1 / -1;
-      font-size: 11px;
-      color: #777;
-      margin-top: 4px;
-    }
-    .point-title {
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
       font-weight: 600;
-      font-size: 12px;
-      color: #ddd;
-      margin-top: 4px;
-      margin-bottom: 2px;
     }
 
-    /* Playback controls */
-    #playbackRow {
+    .layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #181818;
+      border-radius: 8px;
+      padding: 10px 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+      font-size: 13px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+
+    .sidebar-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .sidebar h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .sidebar label {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
     }
-    #playbackButtons {
+
+    .sidebar input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    .camera-buttons {
       display: flex;
       gap: 6px;
-      align-items: center;
+      margin-top: 4px;
       flex-wrap: wrap;
     }
-    #playPauseBtn,
-    #shotToggleBtn,
-    #cutTransitionBtn {
-      padding: 4px 10px;
+
+    .camera-btn {
+      flex: 1;
+      padding: 4px 6px;
       font-size: 12px;
-      border-radius: 4px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #222;
+      color: #eee;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .camera-btn.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: #fff;
+    }
+
+    .camera-btn:hover {
+      background: #333;
+    }
+
+    .camera-btn.active:hover {
+      background: #2563eb;
+    }
+
+    .play-btn {
+      margin-top: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 6px;
       border: 1px solid #444;
       background: #242424;
       color: #eee;
       cursor: pointer;
+      width: 100%;
+      text-align: center;
     }
-    #playPauseBtn:hover,
-    #shotToggleBtn:hover,
-    #cutTransitionBtn:hover {
-      background: #2e2e2e;
+
+    .play-btn:hover {
+      background: #2f2f2f;
     }
-    #timeLabel {
-      font-size: 11px;
-      color: #aaa;
-      font-variant-numeric: tabular-nums;
+
+    /* Video canvas container (16:9) */
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 16px rgba(0,0,0,0.7);
+      max-width: 1000px;
+      aspect-ratio: 16 / 9;
+    }
+
+    #canvas-container canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Timeline & markers */
+    #timeline-panel {
+      margin-top: 12px;
+      background: #181818;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+      font-size: 12px;
+    }
+
+    #timeline-header {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #timeline-bar {
+      position: relative;
+      flex: 1;
+    }
+
+    #timeline-scrubber {
+      width: 100%;
+    }
+
+    #timeline-markers {
+      position: absolute;
+      left: 0;
+      top: 3px;
+      right: 0;
+      height: 8px;
+      pointer-events: none;
+    }
+
+    .marker-tick {
+      position: absolute;
+      width: 4px;
+      height: 8px;
+      background: #f97316;
+      border-radius: 2px;
+      transform: translateX(-50%);
+    }
+
+    #btn-add-marker {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #242424;
+      color: #eee;
+      cursor: pointer;
+      font-size: 12px;
       white-space: nowrap;
     }
 
-    html, body {
-      overflow: auto;
+    #btn-add-marker:hover {
+      background: #2f2f2f;
+    }
+
+    #marker-list {
+      margin: 6px 0 0;
+      padding-left: 0;
+      list-style: none;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #marker-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #222;
+    }
+
+    #marker-list li:last-child {
+      border-bottom: none;
+    }
+
+    .marker-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .marker-time {
+      font-size: 12px;
+    }
+
+    .marker-meta {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .marker-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .marker-btn {
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #222;
+      color: #eee;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .marker-btn:hover {
+      background: #333;
+    }
+
+    #log {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #aaa;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <div id="top-bar">
-    <label>
-      Video file:
-      <input type="file" id="videoFile" accept="video/*" />
-    </label>
-    <span style="font-size:12px;color:#666;">
-      Default clip: sample.mp4 (from this repo). You can also pick your own video.
-    </span>
-  </div>
+  <div id="app">
+    <h2>VIS Demo – Pixi Projection + overlay_data.json + Markers</h2>
 
-  <div id="canvas-container"></div>
-
-  <div id="controls">
-    <!-- Top row: playback + camera -->
-    <div id="controls-top">
-      <!-- Playback controls -->
-      <div class="control-group">
-        <div class="point-title">Playback</div>
-        <div id="playbackRow">
-          <div id="playbackButtons">
-            <button id="playPauseBtn">Play</button>
-            <button id="shotToggleBtn">Track shot</button>
-            <button id="cutTransitionBtn">FX cut</button>
-          </div>
-          <span id="timeLabel">00:00 / 00:00</span>
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3>Layers</h3>
+          <label>
+            <input type="checkbox" id="chk-dots"/>
+            Positions (dots)
+          </label>
+          <label>
+            <input type="checkbox" id="chk-labels"/>
+            Lane IDs (labels)
+          </label>
+          <label>
+            <input type="checkbox" id="chk-speed"/>
+            Speed text
+          </label>
+          <label>
+            <input type="checkbox" id="chk-rect"/>
+            Rectangle
+          </label>
+          <label>
+            <input type="checkbox" id="chk-proj-rect"/>
+            Projection rectangle
+          </label>
         </div>
-        <input id="progress" type="range" min="0" max="100" step="0.1" value="0" />
-      </div>
 
-      <!-- Camera controls -->
-      <div class="control-group">
-        <label>Zoom<span class="value" id="zoomVal">1.00</span></label>
-        <input id="zoom" type="range" min="0.5" max="2.0" step="0.01" value="1.0" />
-      </div>
+        <div class="sidebar-section">
+          <h3>Camera</h3>
+          <div class="camera-buttons">
+            <button class="camera-btn active" id="btn-cam-wide">Wide</button>
+            <button class="camera-btn" id="btn-cam-track">Track</button>
+          </div>
+        </div>
 
-      <div class="control-group">
-        <label>Offset X (pan)<span class="value" id="offXVal">0.00</span></label>
-        <input id="offsetX" type="range" min="-1.0" max="1.0" step="0.01" value="0" />
-      </div>
+        <div class="sidebar-section">
+          <h3>Play / Pause</h3>
+          <button id="btn-play" class="play-btn">Play</button>
+        </div>
 
-      <div class="control-group">
-        <label>Offset Y (tilt)<span class="value" id="offYVal">0.00</span></label>
-        <input id="offsetY" type="range" min="-1.0" max="1.0" step="0.01" value="0" />
-      </div>
+        <div class="sidebar-section">
+          <h3>Options</h3>
+          <label>
+            <input type="checkbox" id="chk-smooth" checked />
+            Smooth motion
+          </label>
+        </div>
+      </aside>
+
+      <!-- Video + overlay -->
+      <div id="canvas-container"></div>
     </div>
 
-    <!-- Bottom row: four corners -->
-    <div id="controls-bottom">
-      <div class="control-group">
-        <div class="point-title">LT (left-top)</div>
-        <label>X ratio<span class="value" id="ltxVal">0.00</span></label>
-        <input id="ltx" type="range" min="-0.5" max="1.5" step="0.01" value="0.0" />
-        <label>Y ratio<span class="value" id="ltyVal">0.00</span></label>
-        <input id="lty" type="range" min="-0.5" max="1.5" step="0.01" value="0.0" />
+    <!-- Timeline & markers -->
+    <div id="timeline-panel">
+      <div id="timeline-header">Timeline & Markers</div>
+      <div class="timeline-row">
+        <div id="timeline-bar">
+          <div id="timeline-markers"></div>
+          <input
+            type="range"
+            id="timeline-scrubber"
+            min="0"
+            max="20"
+            step="0.01"
+            value="0"
+          />
+        </div>
+        <button id="btn-add-marker">Add marker @ current time</button>
       </div>
-
-      <div class="control-group">
-        <div class="point-title">RT (right-top)</div>
-        <label>X ratio<span class="value" id="rtxVal">1.00</span></label>
-        <input id="rtx" type="range" min="-0.5" max="1.5" step="0.01" value="1.0" />
-        <label>Y ratio<span class="value" id="rtyVal">0.00</span></label>
-        <input id="rty" type="range" min="-0.5" max="1.5" step="0.01" value="0.0" />
-      </div>
-
-      <div class="control-group">
-        <div class="point-title">RB (right-bottom)</div>
-        <label>X ratio<span class="value" id="rbxVal">1.00</span></label>
-        <input id="rbx" type="range" min="-0.5" max="1.5" step="0.01" value="1.0" />
-        <label>Y ratio<span class="value" id="rbyVal">1.00</span></label>
-        <input id="rby" type="range" min="-0.5" max="1.5" step="0.01" value="1.0" />
-      </div>
-
-      <div class="control-group">
-        <div class="point-title">LB (left-bottom)</div>
-        <label>X ratio<span class="value" id="lbxVal">0.00</span></label>
-        <input id="lbx" type="range" min="-0.5" max="1.5" step="0.01" value="0.0" />
-        <label>Y ratio<span class="value" id="lbyVal">1.00</span></label>
-        <input id="lby" type="range" min="-0.5" max="1.5" step="0.01" value="1.0" />
-      </div>
-
-      <div id="hint">
-        Point values are normalized (0–1 ≈ edges of the 16:9 canvas, &lt;0 / &gt;1 means outside).<br>
-        "Track shot" uses a smooth camera move (zoom/pan+perspective). "FX cut" uses a fragment-style screen transition
-        between the same wide &amp; track compositions.
-      </div>
+      <ul id="marker-list"></ul>
     </div>
+
+    <div id="log">Loading overlay_data_sample.json ...</div>
   </div>
 
-  <!-- Pixi v6 + pixi-projection 0.4.3 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.8/browser/pixi.min.js"></script>
-  <script src="https://unpkg.com/pixi-projection@0.4.3/dist/pixi-projection.umd.js"></script>
-
-  <script>
-    const containerEl = document.getElementById('canvas-container');
-    const app = new PIXI.Application({
-      resizeTo: containerEl,
-      backgroundColor: 0x000000,
-      antialias: true
-    });
-    containerEl.appendChild(app.view);
-
-    const videoEl = document.createElement('video');
-    videoEl.muted = true;
-    videoEl.loop = true;
-    videoEl.playsInline = true;
-    videoEl.autoplay = true;
-    videoEl.crossOrigin = 'anonymous';
-
-    let videoTexture = null;
-    let videoSprite = null;
-    let durationSec = 0;
-    let isUserScrubbing = false;
-
-    // Playback controls
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const shotToggleBtn = document.getElementById('shotToggleBtn');
-    const cutTransitionBtn = document.getElementById('cutTransitionBtn');
-    const progressInput = document.getElementById('progress');
-    const timeLabel = document.getElementById('timeLabel');
-
-    function formatTime(t) {
-      if (!isFinite(t)) return "00:00";
-      t = Math.floor(t);
-      const m = Math.floor(t / 60);
-      const s = t % 60;
-      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-
-    function updateTimeUI() {
-      const cur = videoEl.currentTime || 0;
-      const dur = durationSec || videoEl.duration || 0;
-      const pct = dur > 0 ? (cur / dur) * 100 : 0;
-      if (!isUserScrubbing) {
-        progressInput.value = pct;
-      }
-      timeLabel.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
-    }
-
-    playPauseBtn.addEventListener('click', () => {
-      if (videoEl.paused) {
-        videoEl.play().catch(() => {});
-      } else {
-        videoEl.pause();
-      }
-    });
-
-    videoEl.addEventListener('play', () => {
-      playPauseBtn.textContent = 'Pause';
-    });
-
-    videoEl.addEventListener('pause', () => {
-      playPauseBtn.textContent = 'Play';
-    });
-
-    videoEl.addEventListener('ended', () => {
-      playPauseBtn.textContent = 'Play';
-    });
-
-    videoEl.addEventListener('timeupdate', () => {
-      updateTimeUI();
-    });
-
-    videoEl.addEventListener('loadedmetadata', () => {
-      durationSec = videoEl.duration || 0;
-      updateTimeUI();
-    });
-
-    // Scrubbing
-    progressInput.addEventListener('input', () => {
-      if (!durationSec) durationSec = videoEl.duration || 0;
-      const pct = parseFloat(progressInput.value);
-      const t = (pct / 100) * (durationSec || 0);
-      isUserScrubbing = true;
-      if (isFinite(t)) {
-        videoEl.currentTime = t;
-      }
-      updateTimeUI();
-      isUserScrubbing = false;
-    });
-
-    // Projection controls
-    const zoomInput = document.getElementById('zoom');
-    const offsetXInput = document.getElementById('offsetX');
-    const offsetYInput = document.getElementById('offsetY');
-
-    const ltxInput = document.getElementById('ltx');
-    const ltyInput = document.getElementById('lty');
-    const rtxInput = document.getElementById('rtx');
-    const rtyInput = document.getElementById('rty');
-    const rbxInput = document.getElementById('rbx');
-    const rbyInput = document.getElementById('rby');
-    const lbxInput = document.getElementById('lbx');
-    const lbyInput = document.getElementById('lby');
-
-    const zoomVal = document.getElementById('zoomVal');
-    const offXVal = document.getElementById('offXVal');
-    const offYVal = document.getElementById('offYVal');
-    const ltxVal = document.getElementById('ltxVal');
-    const ltyVal = document.getElementById('ltyVal');
-    const rtxVal = document.getElementById('rtxVal');
-    const rtyVal = document.getElementById('rtyVal');
-    const rbxVal = document.getElementById('rbxVal');
-    const rbyVal = document.getElementById('rbyVal');
-    const lbxVal = document.getElementById('lbxVal');
-    const lbyVal = document.getElementById('lbyVal');
-
-    function updateLabels() {
-      zoomVal.textContent = Number(zoomInput.value).toFixed(2);
-      offXVal.textContent = Number(offsetXInput.value).toFixed(2);
-      offYVal.textContent = Number(offsetYInput.value).toFixed(2);
-
-      ltxVal.textContent = Number(ltxInput.value).toFixed(2);
-      ltyVal.textContent = Number(ltyInput.value).toFixed(2);
-      rtxVal.textContent = Number(rtxInput.value).toFixed(2);
-      rtyVal.textContent = Number(rtyInput.value).toFixed(2);
-      rbxVal.textContent = Number(rbxInput.value).toFixed(2);
-      rbyVal.textContent = Number(rbyInput.value).toFixed(2);
-      lbxVal.textContent = Number(lbxInput.value).toFixed(2);
-      lbyVal.textContent = Number(lbyInput.value).toFixed(2);
-    }
-    updateLabels();
-
-    function updateProjection() {
-      if (!videoSprite) return;
-
-      const vw = app.renderer.width;
-      const vh = app.renderer.height;
-
-      videoSprite.x = 0;
-      videoSprite.y = 0;
-      videoSprite.width  = vw;
-      videoSprite.height = vh;
-
-      const ltx = parseFloat(ltxInput.value);
-      const lty = parseFloat(ltyInput.value);
-      const rtx = parseFloat(rtxInput.value);
-      const rty = parseFloat(rtyInput.value);
-      const rbx = parseFloat(rbxInput.value);
-      const rby = parseFloat(rbyInput.value);
-      const lbx = parseFloat(lbxInput.value);
-      const lby = parseFloat(lbyInput.value);
-
-      const pLT = new PIXI.Point(ltx * vw, lty * vh);
-      const pRT = new PIXI.Point(rtx * vw, rty * vh);
-      const pRB = new PIXI.Point(rbx * vw, rby * vh);
-      const pLB = new PIXI.Point(lbx * vw, lby * vh);
-
-      videoSprite.proj.affine = PIXI.projection.AFFINE.NONE;
-      videoSprite.proj.mapSprite(videoSprite, [pLT, pRT, pRB, pLB]);
-
-      const zoom = parseFloat(zoomInput.value);
-      const offX = parseFloat(offsetXInput.value);
-      const offY = parseFloat(offsetYInput.value);
-
-      const centerX = vw / 2;
-      const centerY = vh / 2;
-      const maxPanX = vw * 0.5;
-      const maxPanY = vh * 0.5;
-
-      const panX = offX * maxPanX;
-      const panY = offY * maxPanY;
-
-      videoSprite.scale.set(zoom);
-      videoSprite.position.set(
-        panX + (1 - zoom) * centerX,
-        panY + (1 - zoom) * centerY
-      );
-    }
-
-    [
-      zoomInput, offsetXInput, offsetYInput,
-      ltxInput, ltyInput, rtxInput, rtyInput,
-      rbxInput, rbyInput, lbxInput, lbyInput
-    ].forEach(input => {
-      input.addEventListener('input', () => {
-        updateLabels();
-        updateProjection();
-      });
-    });
-
-    window.addEventListener('resize', () => {
-      updateProjection();
-    });
-
-    document.getElementById('videoFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      videoEl.src = url;
-      videoEl.play().catch(() => {});
-    });
-
-    videoEl.addEventListener('loadeddata', () => {
-      if (!videoTexture) {
-        videoTexture = PIXI.Texture.from(videoEl);
-      } else {
-        videoTexture.baseTexture.resource.source = videoEl;
-      }
-
-      if (!videoSprite) {
-        const Sprite2d = PIXI.projection.Sprite2d;
-        videoSprite = new Sprite2d(videoTexture);
-        app.stage.addChild(videoSprite);
-      }
-
-      durationSec = videoEl.duration || durationSec;
-      updateTimeUI();
-      updateProjection();
-    });
-
-    // -------- Camera presets & shot switching --------
-
-    const defaultShot = {
-      zoom: 1.0,
-      offX: 0.0,
-      offY: 0.0,
-      ltx: 0.0,
-      lty: 0.0,
-      rtx: 1.0,
-      rty: 0.0,
-      rbx: 1.0,
-      rby: 1.0,
-      lbx: 0.0,
-      lby: 1.0
-    };
-
-    const trackShot = {
-      zoom: 1.85,
-      offX: 0.0,
-      offY: 0.0,
-      ltx: 0.2,
-      lty: 0.05,
-      rtx: 1.1,
-      rty: 0.0,
-      rbx: 1.0,
-      rby: 1.0,
-      lbx: 0.05,
-      lby: 0.96
-    };
-
-    let currentShot = 'wide';
-    let isAnimatingShot = false;
-    let isFragmentTransition = false;
-
-    function applyShotState(state) {
-      zoomInput.value  = state.zoom;
-      offsetXInput.value = state.offX;
-      offsetYInput.value = state.offY;
-
-      ltxInput.value = state.ltx;
-      ltyInput.value = state.lty;
-      rtxInput.value = state.rtx;
-      rtyInput.value = state.rty;
-      rbxInput.value = state.rbx;
-      rbyInput.value = state.rby;
-      lbxInput.value = state.lbx;
-      lbyInput.value = state.lby;
-
-      updateLabels();
-      updateProjection();
-    }
-
-    function easeOutCubic(t) {
-      return 1 - Math.pow(1 - t, 3);
-    }
-
-    function updateShotButtonLabel() {
-      shotToggleBtn.textContent = (currentShot === 'wide') ? 'Track shot' : 'Wide shot';
-    }
-    updateShotButtonLabel();
-
-    function getNextShotTarget() {
-      return currentShot === 'wide' ? trackShot : defaultShot;
-    }
-
-    function flipShotState() {
-      currentShot = (currentShot === 'wide') ? 'track' : 'wide';
-      updateShotButtonLabel();
-    }
-
-    function animateShotTransition(targetState, duration = 320) {
-      if (isAnimatingShot || isFragmentTransition) return;
-      if (!videoSprite) return;
-      isAnimatingShot = true;
-
-      const from = {
-        zoom: parseFloat(zoomInput.value),
-        offX: parseFloat(offsetXInput.value),
-        offY: parseFloat(offsetYInput.value),
-        ltx: parseFloat(ltxInput.value),
-        lty: parseFloat(ltyInput.value),
-        rtx: parseFloat(rtxInput.value),
-        rty: parseFloat(rtyInput.value),
-        rbx: parseFloat(rbxInput.value),
-        rby: parseFloat(rbyInput.value),
-        lbx: parseFloat(lbxInput.value),
-        lby: parseFloat(lbyInput.value)
-      };
-      const to = targetState;
-      const keys = Object.keys(from);
-      const start = performance.now();
-
-      function step(now) {
-        const t = Math.min((now - start) / duration, 1);
-        const e = easeOutCubic(t);
-
-        const curState = {};
-        keys.forEach(k => {
-          curState[k] = from[k] + (to[k] - from[k]) * e;
-        });
-
-        applyShotState(curState);
-
-        if (t < 1) {
-          requestAnimationFrame(step);
-        } else {
-          isAnimatingShot = false;
-          applyShotState(to);
-        }
-      }
-
-      requestAnimationFrame(step);
-    }
-
-    shotToggleBtn.addEventListener('click', () => {
-      if (!videoSprite) return;
-      if (isAnimatingShot || isFragmentTransition) return;
-
-      const target = getNextShotTarget();
-      flipShotState();
-      animateShotTransition(target, 320);
-    });
-
-    function runFragmentTransition(targetState, duration = 1000, cols = 14, rows = 8) {
-      if (isFragmentTransition || isAnimatingShot) return;
-      if (!videoSprite) return;
-      isFragmentTransition = true;
-
-      const vw = app.renderer.width;
-      const vh = app.renderer.height;
-
-      const rt = PIXI.RenderTexture.create({ width: vw, height: vh });
-      app.renderer.render(app.stage, rt);
-
-      const overlay = new PIXI.Container();
-      app.stage.addChild(overlay);
-
-      const tiles = [];
-      const tileW = vw / cols;
-      const tileH = vh / rows;
-      const centerX = vw / 2;
-      const centerY = vh / 2;
-      const maxDist = Math.max(vw, vh);
-
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = col * tileW;
-          const y = row * tileH;
-          const frame = new PIXI.Rectangle(x, y, tileW, tileH);
-          const tex = new PIXI.Texture(rt.baseTexture, frame);
-          const spr = new PIXI.Sprite(tex);
-          spr.x = x;
-          spr.y = y;
-          overlay.addChild(spr);
-
-          const cx = x + tileW * 0.5;
-          const cy = y + tileH * 0.5;
-          const dx = cx - centerX;
-          const dy = cy - centerY;
-          const len = Math.sqrt(dx*dx + dy*dy) || 1;
-
-          tiles.push({
-            spr,
-            startX: x,
-            startY: y,
-            dirX: dx / len,
-            dirY: dy / len,
-            dist: maxDist * (0.3 + Math.random() * 0.4),
-            rotSpeed: (Math.random() - 0.5) * 1.0
-          });
-        }
-      }
-
-      applyShotState(targetState);
-
-      const startTime = performance.now();
-
-      function step(now) {
-        const t = Math.min((now - startTime) / duration, 1);
-        const e = easeOutCubic(t);
-
-        for (const tile of tiles) {
-          tile.spr.x = tile.startX + tile.dirX * tile.dist * e;
-          tile.spr.y = tile.startY + tile.dirY * tile.dist * e;
-          tile.spr.rotation = tile.rotSpeed * e * Math.PI;
-          tile.spr.alpha = 1 - e;
-        }
-
-        if (t < 1) {
-          requestAnimationFrame(step);
-          return;
-        }
-
-        try {
-          app.stage.removeChild(overlay);
-          for (const tile of tiles) {
-            tile.spr.texture.destroy(true);
-            tile.spr.destroy(true);
-          }
-          overlay.destroy(true);
-          rt.destroy(true);
-        } catch (err) {
-          console.warn("FX cleanup error:", err);
-        }
-
-        isFragmentTransition = false;
-      }
-
-      requestAnimationFrame(step);
-    }
-
-    cutTransitionBtn.addEventListener('click', () => {
-      if (!videoSprite) return;
-      if (isFragmentTransition || isAnimatingShot) return;
-
-      const target = getNextShotTarget();
-      flipShotState();
-      runFragmentTransition(target, 1000, 14, 8);
-    });
-
-    // ✅ 默认加载仓库中的 sample.mp4
-    // 确保仓库根目录有这个文件，或者改成 "assets/sample.mp4" 等路径
-    window.addEventListener('DOMContentLoaded', () => {
-      videoEl.src = "sample.mp4";    // 如果你放在 assets 目录，就改成 "assets/sample.mp4"
-      videoEl.play().catch(() => {}); // autoplay 可能被浏览器拦截，但至少 src 会加载
-    });
-  </script>
+  <!-- Pixi v6 + pixi-projection -->
+  <script src="./libs/pixi.min.js"></script>
+  <script src="./libs/pixi-projection.umd.js"></script>
+
+  <!-- App code -->
+  <script type="module" src="./src/app/main.js"></script>
 </body>
 </html>
